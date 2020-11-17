@@ -26,6 +26,36 @@ code = '''
     lfs_mount(&lfs, &cfg) => LFS_ERR_CORRUPT;
 '''
 
+[[case]] # same file opened twice
+in = "lfs.c"
+code = '''
+    // create littlefs
+    lfs_format(&lfs, &cfg) => 0;
+    lfs_mount(&lfs, &cfg) => 0;
+
+    lfs_file_t files[2];
+
+    // Open a file twice
+    lfs_file_open(&lfs, &files[0], "hello",
+            LFS_O_WRONLY | LFS_O_CREAT) => 0;
+    lfs_file_open(&lfs, &files[1], "hello",
+            LFS_O_RDONLY | LFS_O_CREAT) => 0;
+
+    // Write and sync the file
+    size = strlen("Hello World!")+1;
+    strcpy((char*)buffer, "Hello World!");
+    lfs_file_write(&lfs, &files[0], buffer, size) => size;
+    lfs_file_sync(&lfs, &files[0]) => 0;
+
+    // Read from the other handle
+    lfs_file_read(&lfs, &files[1], buffer, size) => size;
+    assert(strcmp((char*)buffer, "Hello World!") == 0);
+
+    // Close it twice
+    lfs_file_close(&lfs, &files[0]) => 0;
+    lfs_file_close(&lfs, &files[1]) => 0;
+'''
+
 [[case]] # invalid dir pointer test
 define.INVALSET = [0x3, 0x1, 0x2]
 in = "lfs.c"
